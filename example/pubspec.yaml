@@ -23,7 +23,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_screenutil: ^5.0.0+2
+  flutter_sizer: ^1.0.2
   image_gallery_saver: ^1.6.9
   image_picker: ^0.7.4
   image_size_getter: ^1.0.0

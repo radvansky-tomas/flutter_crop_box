@@ -1,7 +1,6 @@
 import 'dart:typed_data';
-
+import 'package:flutter_sizer/flutter_sizer.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ImageResultPage extends StatefulWidget {
   final Uint8List imageBytes;
@@ -20,7 +19,7 @@ class _ImageResultPageState extends State<ImageResultPage> {
       ),
       body: Center(
         child: Container(
-          width: 700.w,
+          width: 80.0.w,
           child: Image.memory(
             widget.imageBytes,
             fit: BoxFit.contain,
