@@ -312,6 +312,11 @@ class _CropBoxState extends State<CropBox> {
 
   Future<void> updateViews(
       BuildContext context, BoxConstraints constrains) async {
+    if (_containerWidth != constrains.maxWidth ||
+        _containerHeight != constrains.maxHeight) {
+      //orientation change?
+      isReady = false;
+    }
     _containerWidth = constrains.maxWidth;
     _containerHeight = constrains.maxHeight;
     _containerPaddingTop = constrains.maxHeight / 100;
