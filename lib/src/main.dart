@@ -288,24 +288,9 @@ class _CropBoxState extends State<CropBox> {
 
   @override
   void didUpdateWidget(covariant CropBox oldWidget) {
-    if (widget.cropRatio != oldWidget.cropRatio) {
-      resultRect = widget.cropRect ?? Rect.fromLTRB(0, 0, 1, 1);
-      assert(resultRect.left >= 0 && resultRect.left <= 1);
-      assert(resultRect.right >= 0 && resultRect.right <= 1);
-      assert(resultRect.top >= 0 && resultRect.top <= 1);
-      assert(resultRect.bottom >= 0 && resultRect.bottom <= 1);
-
-      _originClipSize = widget.clipSize;
-      if (widget.cropBoxType == CropBoxType.Circle) {
-        _cropRatio = Size(1, 1);
-      } else {
-        _cropRatio = widget.cropRatio ?? Size(16, 9);
-      }
-
-      setState(() {
-        isReady = false;
-      });
-    }
+    // setState(() {
+    //   isReady = false;
+    // });
 
     super.didUpdateWidget(oldWidget);
   }
@@ -315,6 +300,14 @@ class _CropBoxState extends State<CropBox> {
     if (_containerWidth != constrains.maxWidth ||
         _containerHeight != constrains.maxHeight) {
       //orientation change?
+      resultRect = widget.cropRect ?? Rect.fromLTRB(0, 0, 1, 1);
+
+      _originClipSize = widget.clipSize;
+      if (widget.cropBoxType == CropBoxType.Circle) {
+        _cropRatio = Size(1, 1);
+      } else {
+        _cropRatio = widget.cropRatio ?? Size(16, 9);
+      }
       isReady = false;
     }
     _containerWidth = constrains.maxWidth;
