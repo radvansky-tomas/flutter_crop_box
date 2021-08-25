@@ -48,11 +48,6 @@ class _CropIndexState extends State<CropIndex> {
           children: [
             Expanded(
               child: CropBox(
-                // cropRect: Rect.fromLTRB(1 - 0.4083, 0.162, 1, 0.3078), // 2.4倍 模拟随机位置
-                // cropRect: Rect.fromLTRB(0, 0, 0.4083, 0.1457), //2.4倍，都是0,0
-                // cropRect: Rect.fromLTRB(0, 0, 1, 0.3572), // 1倍
-                // cropBoxType: CropBoxType.Circle,
-                // borderColor: Colors.white,
                 gridLine: GridLine(),
                 cropRect: _cropRect,
                 clipSize: Size(widget.width, widget.height),
@@ -64,12 +59,12 @@ class _CropIndexState extends State<CropIndex> {
                 ),
                 cropRectUpdateEnd: (rect) {
                   _resultRect = rect;
-                  print("裁剪区域最终确定 $rect");
+                  print("Update End $rect");
                   setState(() {});
                 },
                 cropRectUpdate: (rect) {
                   _resultRect = rect;
-                  print("裁剪区域变化 $rect");
+                  print("Update Start $rect");
                   setState(() {});
                 },
                 child: widget.clipType == ClipType.networkImage
