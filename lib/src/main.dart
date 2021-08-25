@@ -29,6 +29,7 @@ class CropBox extends StatefulWidget {
   final CropBoxBorder? cropBoxBorder;
   final Color? backgroundColor;
   final Color? maskColor;
+
   CropBox(
       {this.cropRect,
       required this.clipSize,
@@ -76,11 +77,21 @@ class _CropBoxState extends State<CropBox> {
 
   bool isReady = false;
 
-  Future<void>? _loading;
-
   @override
   void initState() {
     super.initState();
+    resultRect = widget.cropRect ?? Rect.fromLTRB(0, 0, 1, 1);
+    assert(resultRect.left >= 0 && resultRect.left <= 1);
+    assert(resultRect.right >= 0 && resultRect.right <= 1);
+    assert(resultRect.top >= 0 && resultRect.top <= 1);
+    assert(resultRect.bottom >= 0 && resultRect.bottom <= 1);
+
+    _originClipSize = widget.clipSize;
+    if (widget.cropBoxType == CropBoxType.Circle) {
+      _cropRatio = Size(1, 1);
+    } else {
+      _cropRatio = widget.cropRatio ?? Size(16, 9);
+    }
   }
 
   bool initCrop() {
@@ -278,17 +289,6 @@ class _CropBoxState extends State<CropBox> {
   @override
   void didUpdateWidget(covariant CropBox oldWidget) {
     if (widget.cropRatio != oldWidget.cropRatio) {
-      setState(() {
-        isReady = false;
-      });
-    }
-
-    super.didUpdateWidget(oldWidget);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!isReady) {
       resultRect = widget.cropRect ?? Rect.fromLTRB(0, 0, 1, 1);
       assert(resultRect.left >= 0 && resultRect.left <= 1);
       assert(resultRect.right >= 0 && resultRect.right <= 1);
@@ -302,90 +302,105 @@ class _CropBoxState extends State<CropBox> {
         _cropRatio = widget.cropRatio ?? Size(16, 9);
       }
 
-      _loading = Future.delayed(Duration(milliseconds: 10)).then((value) {
-        _containerWidth = context.size!.width;
-        _containerHeight = context.size!.height;
-        _containerPaddingTop = MediaQuery.of(context).padding.top * 2;
-        _cropBoxMaxSize = widget.maxCropSize ??
-            Size(
-                _containerWidth - _containerPaddingRL * 2,
-                _containerHeight -
-                    _containerPaddingTop -
-                    _containerPaddingBottom);
-        print(
-            "build init data \n _containerWidth: $_containerWidth _containerHeight: $_containerHeight _containerPaddingTop: $_containerPaddingTop");
-        isReady = initCrop();
-        if (widget.cropRectUpdate != null) {
-          resultRect = transPointToCropArea();
-          widget.cropRectUpdate!(resultRect);
-        }
-        setState(() {});
+      setState(() {
+        isReady = false;
       });
     }
 
-    return FutureBuilder(
-        future: _loading,
-        builder: (_, snapshot) {
-          return ClipRect(
-            child: Container(
-              color: widget.backgroundColor ?? Color(0xff141414),
-              child: GestureDetector(
-                onScaleStart: _handleScaleStart,
-                onScaleUpdate: (d) => _handleScaleUpdate(context.size!, d),
-                onScaleEnd: _handleScaleEnd,
-                child: AnimatedSwitcher(
-                  duration: Duration(milliseconds: 200),
-                  child: (isReady &&
-                          snapshot.connectionState == ConnectionState.done)
-                      ? Stack(
-                          children: [
-                            Transform(
-                              transform: Matrix4.identity()
-                                ..scale(max(_scale, 1.0), max(_scale, 1.0))
-                                ..translate(_deltaPoint.dx, _deltaPoint.dy),
-                              origin: _originPos,
-                              child: OverflowBox(
-                                alignment: Alignment.topLeft,
-                                maxWidth: double.infinity,
-                                maxHeight: double.infinity,
-                                child: Container(
-                                  width: _resizeClipSize.width,
-                                  height: _resizeClipSize.height,
-                                  child: widget.child,
-                                ),
+    super.didUpdateWidget(oldWidget);
+  }
+
+  Future<void> updateViews(
+      BuildContext context, BoxConstraints constrains) async {
+    _containerWidth = constrains.maxWidth;
+    _containerHeight = constrains.maxHeight;
+    _containerPaddingTop = constrains.maxHeight / 100;
+    _cropBoxMaxSize = widget.maxCropSize ??
+        Size(_containerWidth - _containerPaddingRL * 2,
+            _containerHeight - _containerPaddingTop - _containerPaddingBottom);
+    if (initCrop()) {
+      if (widget.cropRectUpdate != null) {
+        resultRect = transPointToCropArea();
+        if (isReady == false) {
+          //Release this event only once!!!
+          Future.delayed(Duration(milliseconds: 10), () {
+            widget.cropRectUpdate!(resultRect);
+          });
+        }
+      }
+      isReady = true;
+    }
+
+    print(
+        "isReady=$isReady  init data \n _containerWidth: $_containerWidth _containerHeight: $_containerHeight _containerPaddingTop: $_containerPaddingTop");
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constrains) {
+      return OrientationBuilder(builder: (context, orientation) {
+        updateViews(context, constrains);
+
+        return ClipRect(
+          child: Container(
+            color: widget.backgroundColor ?? Color(0xff141414),
+            child: GestureDetector(
+              onScaleStart: _handleScaleStart,
+              onScaleUpdate: (d) => _handleScaleUpdate(context.size!, d),
+              onScaleEnd: _handleScaleEnd,
+              child: AnimatedSwitcher(
+                duration: Duration(milliseconds: 200),
+                child: (isReady)
+                    ? Stack(
+                        children: [
+                          Transform(
+                            transform: Matrix4.identity()
+                              ..scale(max(_scale, 1.0), max(_scale, 1.0))
+                              ..translate(_deltaPoint.dx, _deltaPoint.dy),
+                            origin: _originPos,
+                            child: OverflowBox(
+                              alignment: Alignment.topLeft,
+                              maxWidth: double.infinity,
+                              maxHeight: double.infinity,
+                              child: Container(
+                                width: _resizeClipSize.width,
+                                height: _resizeClipSize.height,
+                                child: widget.child,
                               ),
                             ),
-                            CustomPaint(
-                              size: Size(double.infinity, double.infinity),
-                              painter: widget.cropBoxType == CropBoxType.Circle
-                                  ? DrawCircleLight(
-                                      clipRect: _cropBoxRealRect,
-                                      centerPoint: _originPos,
-                                      cropBoxBorder: widget.cropBoxBorder ??
-                                          CropBoxBorder(),
-                                      maskColor: widget.maskColor)
-                                  : DrawRectLight(
-                                      clipRect: _cropBoxRealRect,
-                                      needInnerBorder: widget.needInnerBorder,
-                                      gridLine: widget.gridLine,
-                                      cropBoxBorder: widget.cropBoxBorder,
-                                      maskColor: widget.maskColor),
-                            ),
-                          ],
-                        )
-                      : Center(
-                          child: Container(
-                            child: Center(
-                                child: CupertinoActivityIndicator(
-                              radius: 12,
-                            )),
                           ),
+                          CustomPaint(
+                            size: Size(double.infinity, double.infinity),
+                            painter: widget.cropBoxType == CropBoxType.Circle
+                                ? DrawCircleLight(
+                                    clipRect: _cropBoxRealRect,
+                                    centerPoint: _originPos,
+                                    cropBoxBorder:
+                                        widget.cropBoxBorder ?? CropBoxBorder(),
+                                    maskColor: widget.maskColor)
+                                : DrawRectLight(
+                                    clipRect: _cropBoxRealRect,
+                                    needInnerBorder: widget.needInnerBorder,
+                                    gridLine: widget.gridLine,
+                                    cropBoxBorder: widget.cropBoxBorder,
+                                    maskColor: widget.maskColor),
+                          ),
+                        ],
+                      )
+                    : Center(
+                        child: Container(
+                          child: Center(
+                              child: CupertinoActivityIndicator(
+                            radius: 12,
+                          )),
                         ),
-                ),
+                      ),
               ),
             ),
-          );
-        });
+          ),
+        );
+      });
+    });
   }
 
   void _handleScaleStart(ScaleStartDetails details) {
